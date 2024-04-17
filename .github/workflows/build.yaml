@@ -1,0 +1,55 @@
+name: 编译构建
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  build:
+    name: 编译构建（${{ matrix.os }} ${{ matrix.arch }}）
+
+    strategy:
+      matrix:
+        os: [ubuntu, macos, windows]
+        arch: [x86, x64]
+      fail-fast: false
+
+    runs-on: ${{ matrix.os }}-latest
+
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+      - name: 配置 PDM 构建环境
+        uses: pdm-project/setup-pdm@v4
+        with:
+          python-version: '>=3.11,<3.12'
+          architecture: ${{ matrix.arch }}
+          cache: true
+      - name: 安装依赖项和提交钩子
+        run: |-
+          echo "::group::安装依赖项"
+          pdm install
+          echo "::endgroup::"
+          echo "::group::安装提交钩子"
+          pdm run git
+          echo "::endgroup::"
+      - name: 执行持续集成检查
+        run: pdm run ci
+      - name: 编译打包
+        run: pdm run build "Numzle-${{ matrix.os }}_${{ matrix.arch }}"
+      - name: 生成发布说明
+        id: changelog
+        run: |-
+          git log -n 1 --pretty="format: ## %s%n%n%b" > CHANGELOG.txt
+      - name: 发布构建产物
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: CHANGELOG.txt
+          draft: true
+          prerelease: ${{ startsWith(github.ref_name, 'v0') }}
+          files: |-
+            dist/Numzle*
