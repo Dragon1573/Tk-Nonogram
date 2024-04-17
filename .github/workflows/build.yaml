@@ -5,8 +5,6 @@ permissions:
 
 on:
   push:
-    tags:
-      - v*
 
 jobs:
   build:
@@ -26,7 +24,7 @@ jobs:
       - name: 配置 PDM 构建环境
         uses: pdm-project/setup-pdm@v4
         with:
-          python-version: '>=3.11,<3.12'
+          python-version: 3.11
           architecture: ${{ matrix.arch }}
           cache: true
       - name: 安装依赖项和提交钩子
@@ -41,12 +39,21 @@ jobs:
         run: pdm run ci
       - name: 编译打包
         run: pdm run build "Numzle-${{ matrix.os }}_${{ matrix.arch }}"
+      - name: 发布每日构建
+        if: startsWith(github.ref, 'refs/heads/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: Numzle-${{ matrix.os }}_${{ matrix.arch }}
+          path: dist/Numzle*
+          retention-days: 7
       - name: 生成发布说明
         id: changelog
+        if: startsWith(github.ref, 'refs/tags/')
         run: |-
           git log -n 1 --pretty="format: ## %s%n%n%b" > CHANGELOG.txt
       - name: 发布构建产物
         uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           body_path: CHANGELOG.txt
           draft: true
