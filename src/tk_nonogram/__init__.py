@@ -9,7 +9,7 @@ from numpy.random import randint
 from .entities import Nonogram  # type: ignore[import-untyped]
 from .utils import Puzzle, generate_clues  # type: ignore[import-untyped]
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 __all__ = ["main"]
 
 
