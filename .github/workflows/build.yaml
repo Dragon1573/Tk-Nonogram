@@ -8,12 +8,11 @@ on:
 
 jobs:
   build:
-    name: 编译构建（${{ matrix.os }} ${{ matrix.arch }}）
+    name: 编译构建（${{ matrix.os }} amd64）
 
     strategy:
       matrix:
         os: [ubuntu, macos, windows]
-        arch: [x86, x64]
       fail-fast: false
 
     runs-on: ${{ matrix.os }}-latest
@@ -21,11 +20,20 @@ jobs:
     steps:
       - name: 检出仓库
         uses: actions/checkout@v4
+      - name: 安装 MSVC
+        if: ${{ matrix.os }} == 'windows'
+        # Runner 模式预装 MinGW-w64 用于编译 NumPy
+        # 这还只是实验性质的功能，当 PyInstaller 打包时会崩溃
+        # 我们需要安装配置 MSVC ，让 PDM 用它去编译构建 NumPy
+        uses: seanmiddleditch/gha-setup-vsdevenv@v4
+        with:
+          arch: amd64
+          host_arch: amd64
       - name: 配置 PDM 构建环境
         uses: pdm-project/setup-pdm@v4
         with:
           python-version: 3.11
-          architecture: ${{ matrix.arch }}
+          architecture: x64
           cache: true
       - name: 安装依赖项和提交钩子
         run: |-
@@ -38,12 +46,15 @@ jobs:
       - name: 执行持续集成检查
         run: pdm run ci
       - name: 编译打包
-        run: pdm run build "Numzle-${{ matrix.os }}_${{ matrix.arch }}"
+        # macOS 的图标使用 *.icns 而非 *.ico
+        # 因此 Dev Dependencies 中的 Pillow 是必要的
+        # PyInstaller 会使用它转换图标格式
+        run: pdm run build "Numzle-${{ matrix.os }}_amd64"
       - name: 发布每日构建
         if: startsWith(github.ref, 'refs/heads/')
         uses: actions/upload-artifact@v4
         with:
-          name: Numzle-${{ matrix.os }}_${{ matrix.arch }}
+          name: Numzle-${{ matrix.os }}_amd64
           path: dist/Numzle*
           retention-days: 7
       - name: 生成发布说明
