@@ -7,7 +7,7 @@ from tkinter.messagebox import askyesno, showerror, showinfo, showwarning
 from typing import Any
 
 from numpy import ndarray, zeros
-from numpy.dtypes import IntDType
+from numpy.dtypes import Int8DType
 
 from .utils import Clues, Puzzle, generate_clues
 
@@ -106,7 +106,7 @@ class Nonogram:
         self.__answer = "\n".join("".join(map(lambda _: "[X]" if _ else "[ ]", r)) for r in answer)
         self.level, self.cell_size, self.clues = answer.shape[0], cell_size, clues
         self.offset = self.level * self.cell_size // 2
-        self.grid: Puzzle = zeros((self.level, self.level), dtype=IntDType)
+        self.grid: Puzzle = zeros((self.level, self.level), dtype=Int8DType)
         self.undo_log: deque[Activity] = deque()
         self.redo_log: deque[Activity] = deque()
         self.__init_window()
