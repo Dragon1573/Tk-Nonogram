@@ -3,13 +3,13 @@ from tkinter.messagebox import askyesno, showerror, showinfo
 from tkinter.simpledialog import askinteger
 
 from numpy import array
-from numpy.dtypes import IntDType
+from numpy.dtypes import Int8DType
 from numpy.random import randint
 
 from .entities import Nonogram  # type: ignore[import-untyped]
 from .utils import Puzzle, generate_clues  # type: ignore[import-untyped]
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 __all__ = ["main"]
 
 
@@ -38,7 +38,7 @@ def load_file() -> Puzzle:
     if filename := askopenfilename(filetypes=[("Text files", "*.txt")]):
         with open(filename, encoding="UTF-8") as file:
             data = file.readlines()
-        return array([[int(col) for col in row.strip()] for row in data], dtype=IntDType)
+        return array([[int(col) for col in row.strip()] for row in data], dtype=Int8DType)
     return generate_puzzle()
 
 

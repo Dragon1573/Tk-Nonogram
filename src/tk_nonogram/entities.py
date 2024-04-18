@@ -1,4 +1,5 @@
 from _tkinter import Tcl_Obj
+from collections import deque
 from functools import partial
 from tkinter import Button, Canvas, Event, Label, Misc, Tk, Toplevel
 from tkinter.font import Font
@@ -6,9 +7,22 @@ from tkinter.messagebox import askyesno, showerror, showinfo, showwarning
 from typing import Any
 
 from numpy import ndarray, zeros
-from numpy.dtypes import IntDType
+from numpy.dtypes import Int8DType
 
 from .utils import Clues, Puzzle, generate_clues
+
+
+class Activity:
+    """单元格操作事件"""
+
+    def __init__(self, x: int, y: int, is_context: bool) -> None:
+        """
+        Args:
+            x (int): 单元格列
+            y (int): 单元格行
+            is_context (bool): 是否为上下文（鼠标右键）单击？
+        """
+        self.x, self.y, self.is_context = x, y, is_context
 
 
 class Direction:
@@ -92,7 +106,9 @@ class Nonogram:
         self.__answer = "\n".join("".join(map(lambda _: "[X]" if _ else "[ ]", r)) for r in answer)
         self.level, self.cell_size, self.clues = answer.shape[0], cell_size, clues
         self.offset = self.level * self.cell_size // 2
-        self.grid: Puzzle = zeros((self.level, self.level), dtype=IntDType)
+        self.grid: Puzzle = zeros((self.level, self.level), dtype=Int8DType)
+        self.undo_log: deque[Activity] = deque()
+        self.redo_log: deque[Activity] = deque()
         self.__init_window()
 
     def toggle_cell(self, x: int, y: int, is_context: bool) -> None:
@@ -132,6 +148,33 @@ class Nonogram:
         else:
             self.canvas.create_rectangle(x1, y1, x2, y2, fill=("grey" if is_context else "blue"), tag=tag)  # type: ignore
 
+    def undo(self, _: Event) -> None:
+        """
+        撤销至上一步
+
+        Args:
+            _ (Event): TKinter 事件
+        """
+        if self.undo_log:
+            # pop() 操作会在空双向队列是触发 IndexError
+            activity = self.undo_log.pop()
+            self.toggle_cell(activity.x, activity.y, activity.is_context)
+            self.update_cell_visuals(activity.x, activity.y, activity.is_context)
+            self.redo_log.append(activity)
+
+    def redo(self, _: Event) -> None:
+        """
+        重做下一步
+
+        Args:
+            _ (Event): TKinter 事件
+        """
+        if self.redo_log:
+            activity = self.redo_log.pop()
+            self.toggle_cell(activity.x, activity.y, activity.is_context)
+            self.update_cell_visuals(activity.x, activity.y, activity.is_context)
+            self.undo_log.append(activity)
+
     def on_click(self, event: Event, is_context: bool) -> None:
         """
         鼠标事件处理器
@@ -145,11 +188,15 @@ class Nonogram:
         if 0 <= x < self.level and 0 <= y < self.level:
             self.toggle_cell(x, y, is_context)
             self.update_cell_visuals(x, y, is_context)
+            self.undo_log.append(Activity(x, y, is_context))
+            self.redo_log.clear()
 
     def bind_events(self) -> None:
         """绑定鼠标事件"""
-        self.canvas.bind("<Button-1>", partial(self.on_click, is_context=False))
-        self.canvas.bind("<Button-3>", partial(self.on_click, is_context=True))
+        self.canvas.bind_all("<Button-1>", partial(self.on_click, is_context=False))
+        self.canvas.bind_all("<Button-3>", partial(self.on_click, is_context=True))
+        self.canvas.bind_all("<Control-z>", self.undo)
+        self.canvas.bind_all("<Control-r>", self.redo)
 
     def draw_grid_with_clues(self) -> None:
         """绘制带有题目线索的数织网格"""
