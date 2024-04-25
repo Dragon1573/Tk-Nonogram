@@ -12,10 +12,16 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu, macos, windows]
+        include:
+          - os: windows-latest
+            arch: x86
+          - os: [windows-latest, macos-latest-large, ubuntu-latest]
+            arch: x64
+          - os: macos-latest-xlarge
+            arch: arm64
       fail-fast: false
 
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: 检出仓库
@@ -33,7 +39,7 @@ jobs:
         uses: pdm-project/setup-pdm@v4
         with:
           python-version: 3.11
-          architecture: x64
+          architecture: ${{ matrix.arch }}
           cache: true
       - name: 安装依赖项和提交钩子
         run: |-
@@ -45,8 +51,8 @@ jobs:
           echo "::endgroup::"
       - name: 执行持续集成检查
         run: pdm run ci
-        continue-on-error: true
         env:
+          # 让 Ruff 以 GitHub Workflows 集成格式进行输出
           RUFF_OUTPUT_FORMAT: github
       - name: 编译打包
         # macOS 的图标使用 *.icns 而非 *.ico
@@ -57,7 +63,7 @@ jobs:
         if: startsWith(github.ref, 'refs/heads/')
         uses: actions/upload-artifact@v4
         with:
-          name: Numzle-${{ matrix.os }}_amd64
+          name: Numzle-${{ matrix.os }}_${{ matrix.arch }}
           path: dist/Numzle*
           retention-days: 7
       - name: 生成发布说明
