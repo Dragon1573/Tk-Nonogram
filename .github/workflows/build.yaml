@@ -50,6 +50,7 @@ jobs:
           RUFF_OUTPUT_FORMAT: github
       - name: 获取系统代号
         id: get_os
+        shell: bash
         run: |-
           if [[ "${{ matrix.os }}" =~ "windows" ]]; then
             echo "os=windows" >> "$GITHUB_OUTPUT";
