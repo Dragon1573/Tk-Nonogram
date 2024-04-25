@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest-large]
+        os: [windows-latest, ubuntu-latest]
 
       fail-fast: false
 
@@ -158,7 +158,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-latest-xlarge]
+        os: [macos-latest]
 
       fail-fast: false
 
