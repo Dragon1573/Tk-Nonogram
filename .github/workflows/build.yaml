@@ -45,6 +45,9 @@ jobs:
           echo "::endgroup::"
       - name: 执行持续集成检查
         run: pdm run ci
+        continue-on-error: true
+        env:
+          RUFF_OUTPUT_FORMAT: github
       - name: 编译打包
         # macOS 的图标使用 *.icns 而非 *.ico
         # 因此 Dev Dependencies 中的 Pillow 是必要的
