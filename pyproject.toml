@@ -5,9 +5,7 @@ description = "Default template for PDM package"
 authors = [
     { name = "是蓝兔哟～", email = "49941141+Dragon1573@users.noreply.github.com" },
 ]
-dependencies = [
-    "numpy>=1.26.4",
-]
+dependencies = ["numpy>=1.26.4"]
 requires-python = ">=3.11,<3.12"
 readme = "README.md"
 license = { text = "AGPL-3.0" }
@@ -16,34 +14,26 @@ license = { text = "AGPL-3.0" }
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
-[tool.isort]
-profile = "black"
-
 [tool.pdm]
 distribution = false
 
 [tool.pdm.dev-dependencies]
 dev = [
-    "isort>=5.13.2",
-    "black>=24.4.0",
-    "flake8>=7.0.0",
-    "flake8-bugbear>=24.2.6",
     "mypy>=1.9.0",
     "pyinstaller>=6.6.0",
     "pre-commit>=3.7.0",
     "Pillow>=10.3.0",
+    "ruff>=0.4.1",
 ]
 
 [tool.pdm.scripts]
-isort.cmd = "python -m isort -v --profile=black ./src/"
-isort.help = "Sort all imports in the source code."
-black.cmd = "python -m black -v --line-length=120 ./src/"
-black.help = "Reformat the source code."
-flake8.cmd = "python -m flake8 -v ./src/"
-flake8.help = "Lint the source code."
+lint.cmd = "ruff check -v --fix ./src/"
+lint.help = "Lint the project with Ruff."
+format.cmd = "ruff format -v ./src/"
+format.help = "Reformat the project with Ruff and automatically fixup violations."
 mypy.cmd = "python -m mypy ./src/"
 mypy.help = "Scan source code with a static type checker."
-ci.composite = ["isort", "black", "flake8", "mypy"]
+ci.composite = ["lint", "format", "mypy"]
 ci.help = "Run a full CI of the project."
 play.cmd = "python src/main.py"
 play.help = "Launch the main application."
@@ -51,3 +41,10 @@ build.cmd = "pyinstaller --disable-windowed-traceback -y --clean -F -n {args} -w
 build.help = "Build a single-file executable of the project."
 git.cmd = "pre-commit install"
 git.help = "Install pre-commit hooks into Git repository."
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+extend-select = ["B9"]
+extend-ignore = ["E203", "E501", "E701"]
