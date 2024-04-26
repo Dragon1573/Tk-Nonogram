@@ -5,14 +5,41 @@ permissions:
 
 on:
   push:
+    paths-ignore:
+      # 下面这些路径和编译的最终产物没有关系，
+      # 更改它们不会改变最终产物，可以忽略编译构建
+      - assests/
+      - LICENSE
+      - README.md
+      - .github/
+    tags:
+      # 要求版本号必须带有前导字符 v
+      - 'v*.*.*'
+  # 保留手动触发的能力
+  workflow_dispatch:
 
 jobs:
-  amd64:
-    name: 编译构建（${{ matrix.os }} amd64）
+  build:
+    name: 编译构建（${{ matrix.plat }}-${{ matrix.arch }}）
 
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        include:
+          - os: windows-latest
+            plat: windows
+            arch: x64
+          - os: windows-latest
+            plat: windows
+            arch: x86
+          - os: ubuntu-latest
+            plat: linux
+            arch: x64
+          - os: macos-14
+            plat: darwin
+            arch: arm64
+          - os: macos-13
+            plat: darwin
+            arch: x64
 
       fail-fast: false
 
@@ -21,6 +48,7 @@ jobs:
     steps:
       - name: 检出仓库
         uses: actions/checkout@v4
+
       - name: 安装 MSVC
         if: contains(matrix.os, 'windows')
         # Runner 模式预装 MinGW-w64 用于编译 NumPy
@@ -29,12 +57,14 @@ jobs:
         uses: seanmiddleditch/gha-setup-vsdevenv@v4
         with:
           arch: amd64
+
       - name: 配置 PDM 构建环境
         uses: pdm-project/setup-pdm@v4
         with:
           python-version: 3.11
           architecture: x64
           cache: true
+
       - name: 安装依赖项和提交钩子
         run: |-
           echo "::group::安装依赖项"
@@ -43,171 +73,35 @@ jobs:
           echo "::group::安装提交钩子"
           pdm run git
           echo "::endgroup::"
+
       - name: 执行持续集成检查
         run: pdm run ci
         env:
           # 让 Ruff 以 GitHub Workflows 集成格式进行输出
           RUFF_OUTPUT_FORMAT: github
-      - name: 获取系统代号
-        id: get_os
-        shell: bash
-        run: |-
-          if [[ "${{ matrix.os }}" =~ "windows" ]]; then
-            echo "os=windows" >> "$GITHUB_OUTPUT";
-          elif [[ "${{ matrix.os }}" =~ "macos" ]]; then
-            echo "os=darwin" >> "$GITHUB_OUTPUT";
-          elif [[ "${{ matrix.os }}" =~ "ubuntu" ]]; then
-            echo "os=linux" >> "$GITHUB_OUTPUT";
-          fi
+
       - name: 编译打包
+        if: startsWith(github.ref_name, 'v')
         # macOS 的图标使用 *.icns 而非 *.ico
         # 因此 Dev Dependencies 中的 Pillow 是必要的
         # PyInstaller 会使用它转换图标格式
-        run: pdm run build "Numzle-${{ steps.get_os.outputs.os }}_amd64"
-      - name: 发布每日构建
-        if: startsWith(github.ref, 'refs/heads/')
-        uses: actions/upload-artifact@v4
-        with:
-          name: Numzle-${{ steps.get_os.outputs.os }}_amd64
-          path: dist/Numzle*
-          retention-days: 7
+        run: pdm run build "Numzle-${{ matrix.plat }}_${{ matrix.arch }}"
+
       - name: 生成发布说明
         id: changelog
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref_name, 'v')
         run: |-
-          git log -n 1 --pretty="format: ## %s%n%n%b" > CHANGELOG.txt
+          {
+            echo "CHANGELOG<<EOF"
+            git log -n 1 --pretty="format: ## %s%n%n%b"
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+
       - name: 发布构建产物
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref_name, 'v')
         with:
-          body_path: CHANGELOG.txt
-          draft: true
-          prerelease: ${{ startsWith(github.ref_name, 'v0') }}
-          files: |-
-            dist/Numzle*
-
-  i386:
-    name: 编译构建（${{ matrix.os }} i386）
-
-    strategy:
-      matrix:
-        os: [windows-latest]
-
-      fail-fast: false
-
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - name: 检出仓库
-        uses: actions/checkout@v4
-      - name: 安装 MSVC
-        # Runner 模式预装 MinGW-w64 用于编译 NumPy
-        # 这还只是实验性质的功能，当 PyInstaller 打包时会崩溃
-        # 我们需要安装配置 MSVC ，让 PDM 用它去编译构建 NumPy
-        uses: seanmiddleditch/gha-setup-vsdevenv@v4
-        with:
-          arch: x86
-      - name: 配置 PDM 构建环境
-        uses: pdm-project/setup-pdm@v4
-        with:
-          python-version: 3.11
-          architecture: x86
-          cache: true
-      - name: 安装依赖项和提交钩子
-        run: |-
-          echo "::group::安装依赖项"
-          pdm install
-          echo "::endgroup::"
-          echo "::group::安装提交钩子"
-          pdm run git
-          echo "::endgroup::"
-      - name: 执行持续集成检查
-        run: pdm run ci
-        env:
-          # 让 Ruff 以 GitHub Workflows 集成格式进行输出
-          RUFF_OUTPUT_FORMAT: github
-      - name: 编译打包
-        # macOS 的图标使用 *.icns 而非 *.ico
-        # 因此 Dev Dependencies 中的 Pillow 是必要的
-        # PyInstaller 会使用它转换图标格式
-        run: pdm run build "Numzle-windows_i386"
-      - name: 发布每日构建
-        if: startsWith(github.ref, 'refs/heads/')
-        uses: actions/upload-artifact@v4
-        with:
-          name: Numzle-windows_i386
-          path: dist/Numzle*
-          retention-days: 7
-      - name: 生成发布说明
-        id: changelog
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |-
-          git log -n 1 --pretty="format: ## %s%n%n%b" > CHANGELOG.txt
-      - name: 发布构建产物
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          body_path: CHANGELOG.txt
-          draft: true
-          prerelease: ${{ startsWith(github.ref_name, 'v0') }}
-          files: |-
-            dist/Numzle*
-
-  arm64:
-    name: 编译构建（${{ matrix.os }} arm64）
-
-    strategy:
-      matrix:
-        os: [macos-latest]
-
-      fail-fast: false
-
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - name: 检出仓库
-        uses: actions/checkout@v4
-      - name: 配置 PDM 构建环境
-        uses: pdm-project/setup-pdm@v4
-        with:
-          python-version: 3.11
-          architecture: arm64
-          cache: true
-      - name: 安装依赖项和提交钩子
-        run: |-
-          echo "::group::安装依赖项"
-          pdm install
-          echo "::endgroup::"
-          echo "::group::安装提交钩子"
-          pdm run git
-          echo "::endgroup::"
-      - name: 执行持续集成检查
-        run: pdm run ci
-        env:
-          # 让 Ruff 以 GitHub Workflows 集成格式进行输出
-          RUFF_OUTPUT_FORMAT: github
-      - name: 编译打包
-        # macOS 的图标使用 *.icns 而非 *.ico
-        # 因此 Dev Dependencies 中的 Pillow 是必要的
-        # PyInstaller 会使用它转换图标格式
-        run: pdm run build "Numzle-darwin_arm64"
-      - name: 发布每日构建
-        if: startsWith(github.ref, 'refs/heads/')
-        uses: actions/upload-artifact@v4
-        with:
-          name: Numzle-darwin_arm64
-          path: dist/Numzle*
-          retention-days: 7
-      - name: 生成发布说明
-        id: changelog
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |-
-          git log -n 1 --pretty="format: ## %s%n%n%b" > CHANGELOG.txt
-      - name: 发布构建产物
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          body_path: CHANGELOG.txt
+          body: ${{ steps.changelog.outputs.CHANGELOG }}
           draft: true
           prerelease: ${{ startsWith(github.ref_name, 'v0') }}
           files: |-
