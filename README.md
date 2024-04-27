@@ -6,9 +6,19 @@
 
 ## 使用方法
 
-### 一般用户（仅 *Windows* `amd64` ）
+### 一般用户
 
-下载预编译二进制文件，双击启动。
+前往 [GitHub Releases](https://github.com/Dragon1573/Tk-Nonogram/releases/tag/v0.4.0) ，下载最新版本的可执行二进制文件。
+
+> [!TIP]
+>
+> 目前已支持以下操作系统和架构：
+>
+> |         |       amd64        |        i386        |       arm64        |
+> | :-----: | :----------------: | :----------------: | :----------------: |
+> | Windows | :heavy_check_mark: | :heavy_check_mark: |                    |
+> |  macOS  | :heavy_check_mark: |                    | :heavy_check_mark: |
+> |  Linux  | :heavy_check_mark: |                    |                    |
 
 ### 进阶用户（全平台开发者）
 
@@ -18,8 +28,12 @@
 
 ```powershell
 # 使用 SSH Clone (推荐)
-git clone --progress git@gitee.com:Dragon1573/tk-nonogram.git
+git clone --progress git@github.com:Dragon1573/tk-nonogram.git
 # 使用 HTTPS Clone
+git clone --progress https://github.com/Dragon1573/tk-nonogram.git
+# 中国大陆用户使用 SSH Clone (推荐)
+git clone --progress git@gitee.com:Dragon1573/tk-nonogram.git
+# 中国大陆用户使用 HTTPS Clone
 git clone --progress https://gitee.com/Dragon1573/tk-nonogram.git
 
 # 切换到项目目录
@@ -50,4 +64,3 @@ pdm run build Numzle
 ## 应用截图
 
 ![开发模式截图](assets/dev_launch.png)
-![CI集成测试](assets/ci_check.png)

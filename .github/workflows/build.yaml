@@ -3,6 +3,10 @@ name: 编译构建
 permissions:
   contents: write
 
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.sha }}
+
 on:
   push:
     paths-ignore:
