@@ -15,6 +15,18 @@ on:
     tags:
       # 要求版本号必须带有前导字符 v
       - 'v*.*.*'
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      # 下面这些路径和编译的最终产物没有关系，
+      # 更改它们不会改变最终产物，可以忽略编译构建
+      - assests/
+      - LICENSE
+      - README.md
+      - .github/
   # 保留手动触发的能力
   workflow_dispatch:
 
