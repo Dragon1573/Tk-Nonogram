@@ -75,7 +75,6 @@ jobs:
         with:
           python-version: 3.11
           architecture: x64
-          cache: true
 
       - name: 安装依赖项和提交钩子
         run: |-
